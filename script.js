@@ -94,8 +94,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const containerRect = mediaContainer.getBoundingClientRect();
         const relX = parseFloat(element.dataset.relX) || 0.5;
         const relY = parseFloat(element.dataset.relY) || 0.5;
-        const left = (imgRect.left - containerRect.left + relX * imgRect.width) / containerRect.width * 100;
-        const top = (imgRect.top - containerRect.top + relY * imgRect.height) / containerRect.height * 100;
+
+        // Calcular posição com base na posição relativa
+        let left = imgRect.left - containerRect.left + relX * imgRect.width;
+        let top = imgRect.top - containerRect.top + relY * imgRect.height;
+
+        // Converter para porcentagem relativa ao contêiner
+        left = (left / containerRect.width) * 100;
+        top = (top / containerRect.height) * 100;
+
         element.style.left = `${left}%`;
         element.style.top = `${top}%`;
     }
@@ -243,10 +250,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 const dx = event.clientX - initialMouseX;
                 const dy = event.clientY - initialMouseY;
                 const imgRect = imagePreview.getBoundingClientRect();
+
+                // Calcular nova posição relativa
                 let relX = initialRelX + dx / imgRect.width;
                 let relY = initialRelY + dy / imgRect.height;
-                relX = Math.max(0, Math.min(1, relX));
-                relY = Math.max(0, Math.min(1, relY));
+
+                // Permitir posicionamento ligeiramente fora da imagem
+                relX = Math.max(-0.1, Math.min(1.1, relX));
+                relY = Math.max(-0.1, Math.min(1.1, relY));
+
                 element.dataset.relX = relX;
                 element.dataset.relY = relY;
                 updateTextCSSPosition(element);
@@ -263,6 +275,8 @@ document.addEventListener('DOMContentLoaded', function() {
             isDragging = false;
             isMultiTouch = false;
             element.classList.remove('dragging');
+            // Garantir que a posição final seja mantida
+            updateTextCSSPosition(element);
         }
 
         element.addEventListener('mousedown', startManipulation);
@@ -523,13 +537,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const x = relX * canvas.width;
                 const y = relY * canvas.height;
 
-                const previewRect = imagePreview.getBoundingClientRect();
-                const scale = canvas.width / previewRect.width;
-                const scaledFont = fontSize * scale;
-
                 ctx.save();
                 ctx.translate(x, y);
-                ctx.font = `${scaledFont}px ${fontFamily}`;
+                ctx.font = `${fontSize}px ${fontFamily}`;
                 ctx.fillStyle = color;
                 ctx.textAlign = textAlign;
                 ctx.textBaseline = 'middle';
