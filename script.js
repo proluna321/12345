@@ -135,6 +135,7 @@ document.addEventListener('DOMContentLoaded', function() {
         textElement.style.textAlign = alignments[currentAlignIndex].name;
         textElement.style.position = 'absolute';
         textElement.style.transform = 'translate(-50%, -50%)';
+        textElement.style.whiteSpace = 'pre-wrap';
         textElement.dataset.relX = 0.5;
         textElement.dataset.relY = 0.5;
 
@@ -142,6 +143,7 @@ document.addEventListener('DOMContentLoaded', function() {
         textElement.addEventListener('input', () => {
             if (textElement.textContent.length > 15) {
                 textElement.textContent = textElement.textContent.slice(0, 15);
+                // Colocar o cursor no final do texto
                 const range = document.createRange();
                 const sel = window.getSelection();
                 range.selectNodeContents(textElement);
@@ -202,12 +204,18 @@ document.addEventListener('DOMContentLoaded', function() {
         let initialMouseX = 0;
         let initialMouseY = 0;
         let initialFontSize = parseFloat(element.style.fontSize) || 24;
+        let initialRotation = 0;
         let initialDistance = 0;
+        let initialAngle = 0;
 
         function getTouchDistance(touch1, touch2) {
             const dx = touch2.clientX - touch1.clientX;
             const dy = touch2.clientY - touch1.clientY;
             return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function getTouchAngle(touch1, touch2) {
+            return Math.atan2(touch2.clientY - touch1.clientY, touch2.clientX - touch1.clientX) * 180 / Math.PI;
         }
 
         function startManipulation(e) {
@@ -227,7 +235,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 isDragging = false;
                 isMultiTouch = true;
                 initialFontSize = parseFloat(element.style.fontSize) || 24;
+                initialRotation = element.style.transform.match(/rotate\(([^)]+)\)/) ? 
+                    parseFloat(element.style.transform.match(/rotate\(([^)]+)\)/)[1]) : 0;
                 initialDistance = getTouchDistance(touches[0], touches[1]);
+                initialAngle = getTouchAngle(touches[0], touches[1]);
                 element.classList.add('dragging');
             }
         }
@@ -252,10 +263,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 updateTextCSSPosition(element);
             } else if (isMultiTouch && touches.length === 2) {
                 const currentDistance = getTouchDistance(touches[0], touches[1]);
+                const currentAngle = getTouchAngle(touches[0], touches[1]);
                 const scaleFactor = currentDistance / initialDistance;
                 const newFontSize = Math.max(12, Math.min(100, initialFontSize * scaleFactor));
+                const deltaAngle = currentAngle - initialAngle;
+                const newRotation = initialRotation + deltaAngle;
+
                 element.style.fontSize = `${newFontSize}px`;
-                element.style.transform = `translate(-50%, -50%)`;
+                element.style.transform = `translate(-50%, -50%) rotate(${newRotation}deg)`;
             }
         }
 
@@ -270,33 +285,27 @@ document.addEventListener('DOMContentLoaded', function() {
         document.addEventListener('mouseup', stopManipulation);
 
         element.addEventListener('touchstart', startManipulation, { passive: false });
-        document.addEventListener('touchmove', manipulate, { passive: true });
+        document.addEventListener('touchmove', manipulate, { passive: false });
         document.addEventListener('touchend', stopManipulation);
         document.addEventListener('touchcancel', stopManipulation);
 
         element.addEventListener('dragstart', (e) => e.preventDefault());
     }
 
-    textColor.addEventListener('input', function() {
-        if (activeTextElement) {
-            activeTextElement.style.color = textColor.value;
-        }
+    textColor.addEventListener('input', () => {
+        if (activeTextElement) activeTextElement.style.color = textColor.value;
     });
 
     changeFont.addEventListener('click', () => {
         currentFontIndex = (currentFontIndex + 1) % fonts.length;
         changeFont.textContent = fonts[currentFontIndex];
-        if (activeTextElement) {
-            activeTextElement.style.fontFamily = fonts[currentFontIndex];
-        }
+        if (activeTextElement) activeTextElement.style.fontFamily = fonts[currentFontIndex];
     });
 
     changeAlign.addEventListener('click', () => {
         currentAlignIndex = (currentAlignIndex + 1) % alignments.length;
         changeAlign.innerHTML = `<i class="fas ${alignments[currentAlignIndex].icon}"></i>`;
-        if (activeTextElement) {
-            activeTextElement.style.textAlign = alignments[currentAlignIndex].name;
-        }
+        if (activeTextElement) activeTextElement.style.textAlign = alignments[currentAlignIndex].name;
     });
 
     finishText.addEventListener('click', () => {
@@ -308,7 +317,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    mediaContainer.addEventListener('click', function(e) {
+    mediaContainer.addEventListener('click', (e) => {
         if (e.target === mediaContainer) {
             if (activeTextElement) {
                 activeTextElement.classList.remove('text-active');
@@ -320,13 +329,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function rgbToHex(rgb) {
-        if (!rgb || !rgb.includes('rgb')) {
-            return '#000000';
-        }
+        if (!rgb || !rgb.startsWith('rgb')) return '#000000';
         const match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
-        if (!match) {
-            return rgb;
-        }
+        if (!match) return rgb;
         function hex(x) {
             return ("0" + parseInt(x).toString(16)).slice(-2);
         }
@@ -371,9 +376,7 @@ document.addEventListener('DOMContentLoaded', function() {
         ctx.drawImage(cameraView, 0, 0, canvas.width, canvas.height);
 
         cameraView.style.filter = 'brightness(2)';
-        setTimeout(() => {
-            cameraView.style.filter = 'brightness(1)';
-        }, 300);
+        setTimeout(() => cameraView.style.filter = 'brightness(1)', 300);
 
         currentImage = canvas.toDataURL('image/jpeg', 0.9);
         imagePreview.src = currentImage;
@@ -431,9 +434,7 @@ document.addEventListener('DOMContentLoaded', function() {
         resetStatus();
     });
 
-    chooseFileBtn.addEventListener('click', () => {
-        fileInput.click();
-    });
+    chooseFileBtn.addEventListener('click', () => fileInput.click());
 
     fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
@@ -473,9 +474,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function applyFilter() {
-        if (!currentImage) {
-            return;
-        }
+        if (!currentImage) return;
         const intensity = currentFilterIntensity / 100;
         let filterValue = currentFilter === 'none' ? 'none' : currentFilter.replace(/([\d.]+)(%|px|deg)/g, (match, number, unit) => {
             return `${parseFloat(number) * intensity}${unit}`;
@@ -501,10 +500,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const canvas = document.createElement('canvas');
             const img = new Image();
-            await new Promise(resolve => {
-                img.onload = resolve;
-                img.src = currentImage;
-            });
+            await new Promise(resolve => { img.onload = resolve; img.src = currentImage; });
             canvas.width = img.width;
             canvas.height = img.height;
             const ctx = canvas.getContext('2d');
@@ -529,6 +525,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 ctx.save();
                 ctx.translate(x, y);
+                const tf = el.style.transform.match(/rotate\(([^)]+)\)/);
+                const rotation = tf ? parseFloat(tf[1]) * Math.PI / 180 : 0;
+                ctx.rotate(rotation);
                 ctx.font = `${scaledFont}px ${fontFamily}`;
                 ctx.fillStyle = color;
                 ctx.textAlign = textAlign;
@@ -545,9 +544,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: base64Data
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const result = await response.json();
 
             if (result.success) {

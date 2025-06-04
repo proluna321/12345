@@ -419,11 +419,11 @@ h3 {
     cursor: move;
     user-select: none;
     padding: 5px;
-    max-width: 90%; /* Aumentado para evitar compressão */
-    white-space: nowrap; /* Evita quebras de linha automáticas */
+    max-width: 80%;
+    word-break: break-word;
     text-align: center;
-    transition: left 0.1s ease-out, top 0.1s ease-out;
-    overflow: visible; /* Garante que o texto não seja cortado */
+    transition: left 0.1s ease-out, top 0.1s ease-out, transform 0.1s ease-out;
+    caret-color: auto;
 }
 
 .draggable-text.dragging {
@@ -643,7 +643,7 @@ h3 {
     }
 
     .draggable-text {
-        max-width: 95%;
+        max-width: 90%;
     }
 
     #realTimeText {
